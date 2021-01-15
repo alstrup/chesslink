@@ -160,33 +160,21 @@ function sends() {
 
 <button onclick="js:sends()">Send S</button>
 
+<ol>
+	<li>
+	Turn on your chess link, connect it with your laptop/computer/phone using bluetooth in the OS.
+	</li>
+	<li>
+	Open the JS console to inspect connection and progress. Ctrl+shift+j in Chrome.
+	</li>
+	<li>
+	Click Connect. It will scan for bluetooth devices, and your Millenium
+	Chess device should appear. Pair with that, and you will get output
+	about a connection, a service, and three different characteristics in the console.
+	</li>
+	<li>
+	TODO: Figure out how to initialize the board state, & get moves.
+	</li>
+</ol>
 
-<p>
-
-Open the JS console to inspect connection and progress.
-
-</p>
-<p>
-
-<a href="https://github.com/domschl/python-mchess/blob/master/mchess/magic-board.md">Docs</a>
-
-<a href="https://www.youtube.com/watch?v=eHqtiCMe4NA&list=PLYj4Cw17Aw7ypuXt7mDFWAyy6P661TD48&index=5">Introduction to bluetooth GATT</a>
-
-<code><pre>
-List of characteristics:
-(https://www.microchip.com/forums/m893253.aspx)
-
-	// Write Notify
-	"49535343-026e-3a9b-954c-97daef17e26e"
-	// Notify. Called TX in Python mchess. Read on this gives 0, 0, 0, 0, 0.
-	"49535343-1e4d-4bd9-ba61-23c647249616"
-	// Read. Initial read gives:
-	// 136, 102, 0, 0, 0, 0, 0, 0, 0   	^B
-	"49535343-6daa-4d02-abf6-19569aca69fe"
-	// Write. Called RX in Python mchess
-	"49535343-8841-43f4-a8d4-ecbe34729bb3"
-	// Write Notify
-	"49535343-aca3-481c-91ec-d85e28a60318"
-</pre></code>
-</p>
 </html>
