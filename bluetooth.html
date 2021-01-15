@@ -1,0 +1,192 @@
+<html>
+
+<script>
+
+function getParity(n) {
+    var parity = 0; 
+    while (n != 0) { 
+        parity = 1 - parity; 
+        n = n & (n - 1); 
+    }      
+    return parity; 
+}
+
+function addOddParity(n) {
+	n = n & 0x7f;
+	if (getParity(n) == 1) {
+		return n | 0x80
+	} else return n;
+}
+
+function checksum(s) {
+	var par = 0x00;
+	for (var i = 0; i < s.length; ++i) {
+		par = par ^ s.charCodeAt(i);
+	}
+	return par.toString(16);
+}
+
+// This encodes the message s with parity and checksum for transmission
+function encode(s) {
+	var msg = s + checksum(s);
+	var res = [];
+	for (var i = 0; i < msg.length; ++i) {
+		res.push(addOddParity(msg.charCodeAt(i)));
+	}
+	return res;
+}
+
+function monitorCharacteristic(name, characteristic) {
+	console.log("Got " + name + " characteristic with these properties:");
+	console.log(characteristic.properties);
+
+	characteristic.addEventListener('characteristicvaluechanged', event => {
+		console.log(name + " Characteristic Changed");
+		console.log(event)
+	});
+	characteristic.addEventListener('advertisementreceived', event => {
+		console.log(name + " Advertisement Received");
+		console.log(event)
+	});
+
+	// This does not give any useful information on the face of it:
+/*	characteristic.getDescriptors().then(de => {
+		console.log("Descriptors for " + name);
+		for (var i = 0; i < de.length; ++i) {
+			console.log(de[i]);
+			de[i].readValue().then(val => {
+				console.log("Description " + i + " value for " + name);
+				console.log(val);
+			}).catch(function(error) {
+				console.log("Something went wrong with descriptor value. " + error);
+			});
+		}
+	}).catch(function(error) {
+		console.log("Something went wrong with descriptors. " + error);
+	});*/
+}
+
+function read(name, characteristic) {
+	characteristic.readValue().then(val => {
+		console.log("Read from " + name);
+		console.log(val);
+	}).catch(e => {
+		console.log("Could not read from " + name + ": " + e);
+	});
+}
+
+
+function send(m) {
+	console.log("Sending " + m);
+	var message = encode(m);
+	const buffer = new ArrayBuffer(message.length);
+	var data = new Int8Array(buffer);
+	for (var i = 0; i < message.length; ++i) {
+		data[i] = message[i];
+	}
+	writeCharacteristic.writeValue(data).then(val => {
+		console.log("Sent " + m + ".");
+	}).catch(e => {
+		console.log("Could not send " + m + ": " + e);
+	});
+}
+
+var device = null;
+var service = null;
+var notifyCharacteristic = null;
+var writeCharacteristic = null;
+var readCharacteristic = null;
+
+
+// This is what we run when we click
+function discover() {
+	let options = {
+		filters: [{name: 'MILLENNIUM CHESS'}],
+		optionalServices: ['49535343-fe7d-4ae5-8fa9-9fafd205e455']
+	}
+
+	navigator.bluetooth.requestDevice(options).then(function(d) {
+		device = d;
+		console.log('Found ' + device.name + " with id " + device.id);
+		// Do something with the device.
+		return device.gatt.connect();
+	}).then(server => {
+		console.log("Got connection");
+		return device.gatt.getPrimaryService('49535343-fe7d-4ae5-8fa9-9fafd205e455');
+	}).then(s => {
+		service = s;
+		console.log("Got service");
+		console.log(s);
+		// Find the notify characteristics
+		return service.getCharacteristic("49535343-1e4d-4bd9-ba61-23c647249616");
+	}).then(wc => {
+		notifyCharacteristic = wc;
+		monitorCharacteristic("notify", notifyCharacteristic);
+
+		// This is what mchess does initially:
+		const data = new Uint8Array([1]);
+		return notifyCharacteristic.writeValue(data);
+	}).then(__ => {
+		console.log("1 written to notify characteristic");
+		// Find the write characteristics
+		return service.getCharacteristic("49535343-8841-43f4-a8d4-ecbe34729bb3");
+	}).then(characteristic => {
+		writeCharacteristic = characteristic;
+		monitorCharacteristic("write", writeCharacteristic);
+		// Find the read characteristics
+		return service.getCharacteristic("49535343-6daa-4d02-abf6-19569aca69fe");
+	}).then(characteristic => {
+		readCharacteristic = characteristic;
+		monitorCharacteristic("read", readCharacteristic);
+	}).catch(function(error) {
+		console.log("Something went wrong. " + error);
+	});
+}
+
+function readall() {
+	read("read", readCharacteristic);
+	read("notify", notifyCharacteristic);
+}
+
+function sends() {
+	send("S")
+}
+
+</script>
+
+<button onclick="js:discover()">Connect</button>
+
+<button onclick="js:readall()">Read all values</button>
+
+<button onclick="js:sends()">Send S</button>
+
+
+<p>
+
+Open the JS console to inspect connection and progress.
+
+</p>
+<p>
+
+<a href="https://github.com/domschl/python-mchess/blob/master/mchess/magic-board.md">Docs</a>
+
+<a href="https://www.youtube.com/watch?v=eHqtiCMe4NA&list=PLYj4Cw17Aw7ypuXt7mDFWAyy6P661TD48&index=5">Introduction to bluetooth GATT</a>
+
+<code><pre>
+List of characteristics:
+(https://www.microchip.com/forums/m893253.aspx)
+
+	// Write Notify
+	"49535343-026e-3a9b-954c-97daef17e26e"
+	// Notify. Called TX in Python mchess. Read on this gives 0, 0, 0, 0, 0.
+	"49535343-1e4d-4bd9-ba61-23c647249616"
+	// Read. Initial read gives:
+	// 136, 102, 0, 0, 0, 0, 0, 0, 0   	^B
+	"49535343-6daa-4d02-abf6-19569aca69fe"
+	// Write. Called RX in Python mchess
+	"49535343-8841-43f4-a8d4-ecbe34729bb3"
+	// Write Notify
+	"49535343-aca3-481c-91ec-d85e28a60318"
+</pre></code>
+</p>
+</html>
