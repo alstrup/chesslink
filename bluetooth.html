@@ -36,33 +36,48 @@ function encode(s) {
 	return res;
 }
 
+function handleBoardData(dataview) {
+	var boardIndex = 0;
+	var board = [];
+	for (var i = 0 ; i < dataview.byteLength; ++i) {
+		var c = dataview.getUint8(i) & 0x7f;
+		if (c < 0x20 || c > 0x7a) { 
+		} else if (c == 's'.charCodeAt(0)) {
+			boardIndex = 0;
+		} else if (boardIndex < 64) {
+			board[boardIndex] = c;
+            boardIndex++;
+		} else {
+			// Other stuff comes here,
+			// but that is for the parity, which
+			// we will just ignore
+		}
+	}
+
+	// Now, we have the board in board. Print it
+	console.log("Received board");
+	boardIndex = 0;
+	for (var y = 0; y < 8; ++y) {
+		var row = "" + (y + 1) + " ";
+		for (var x = 0; x < 8; ++x) {
+			row += String.fromCharCode(board[boardIndex]);
+			boardIndex++;
+		}
+		console.log(row);
+	}
+}
+
 function monitorCharacteristic(name, characteristic) {
-	console.log("Got " + name + " characteristic with these properties:");
-	console.log(characteristic.properties);
+	console.log("Got " + name + " characteristic");
+//	console.log(characteristic.properties);
 
 	characteristic.addEventListener('characteristicvaluechanged', event => {
-		console.log(name + " Characteristic Changed");
-		console.log(event)
+		var dataview = event.currentTarget.value;
+		handleBoardData(dataview);
 	});
-	characteristic.addEventListener('advertisementreceived', event => {
+/*	characteristic.addEventListener('advertisementreceived', event => {
 		console.log(name + " Advertisement Received");
 		console.log(event)
-	});
-
-	// This does not give any useful information on the face of it:
-/*	characteristic.getDescriptors().then(de => {
-		console.log("Descriptors for " + name);
-		for (var i = 0; i < de.length; ++i) {
-			console.log(de[i]);
-			de[i].readValue().then(val => {
-				console.log("Description " + i + " value for " + name);
-				console.log(val);
-			}).catch(function(error) {
-				console.log("Something went wrong with descriptor value. " + error);
-			});
-		}
-	}).catch(function(error) {
-		console.log("Something went wrong with descriptors. " + error);
 	});*/
 }
 
@@ -114,7 +129,7 @@ function discover() {
 	}).then(s => {
 		service = s;
 		console.log("Got service");
-		console.log(s);
+		// console.log(s);
 		// Find the notify characteristics
 		return service.getCharacteristic("49535343-1e4d-4bd9-ba61-23c647249616");
 	}).then(wc => {
@@ -123,7 +138,7 @@ function discover() {
 
 		return notifyCharacteristic.startNotifications();
 	}).then(char => {
-		console.log("Started notifications");
+		console.log("Started notifications. Make a move");
 		return service.getCharacteristic("49535343-8841-43f4-a8d4-ecbe34729bb3");
 	}).then(characteristic => {
 		writeCharacteristic = characteristic;
@@ -159,10 +174,10 @@ function sends() {
 	<li>
 	Click Connect. It will scan for bluetooth devices, and your Millenium
 	Chess device should appear. Pair with that, and you will get output
-	about a connection, a service, and three different characteristics in the console.
+	about a connection, a service, and twos different characteristics in the console.
 	</li>
 	<li>
-	TODO: Figure out how to initialize the board state, & get moves.
+	Make a move, and the new board position will be printed.
 	</li>
 </ol>
 

@@ -131,7 +131,6 @@ MainActivity:
 
 BluetoothLeService:
     - Sets up queues to collect and receive data
-    - 
 
 ChessBoardActivity:
 - makeGattUpdateIntentFilter
@@ -140,6 +139,11 @@ ChessBoardActivity:
         intentFilter.addAction(BluetoothLeService.ACTION_GATT_SERVICES_DISCOVERED);
         intentFilter.addAction(BluetoothLeService.ACTION_DATA_AVAILABLE);
 - enableNotification
-    - If the characteristics has read, we set notifiaction
+    - If the characteristics has read, we set notification
       and calls readCharacteristic using the mTxCharacteristic
+
+I find the data in the
+		var dataview = event.currentTarget.value;
+
+handleData
 
