@@ -93,10 +93,8 @@ function send(m) {
 
 var device = null;
 var service = null;
-var notifyCharacteristic = null;
-var writeCharacteristic = null;
-var readCharacteristic = null;
-
+var notifyCharacteristic = null;	// Called TX
+var writeCharacteristic = null;		// Called RX
 
 // This is what we run when we click
 function discover() {
@@ -121,30 +119,21 @@ function discover() {
 		return service.getCharacteristic("49535343-1e4d-4bd9-ba61-23c647249616");
 	}).then(wc => {
 		notifyCharacteristic = wc;
-		monitorCharacteristic("notify", notifyCharacteristic);
+		monitorCharacteristic("notify (TX)", notifyCharacteristic);
 
-		// This is what mchess does initially:
-		const data = new Uint8Array([1]);
-		return notifyCharacteristic.writeValue(data);
-	}).then(__ => {
-		console.log("1 written to notify characteristic");
-		// Find the write characteristics
+		return notifyCharacteristic.startNotifications();
+	}).then(char => {
+		console.log("Started notifications");
 		return service.getCharacteristic("49535343-8841-43f4-a8d4-ecbe34729bb3");
 	}).then(characteristic => {
 		writeCharacteristic = characteristic;
-		monitorCharacteristic("write", writeCharacteristic);
-		// Find the read characteristics
-		return service.getCharacteristic("49535343-6daa-4d02-abf6-19569aca69fe");
-	}).then(characteristic => {
-		readCharacteristic = characteristic;
-		monitorCharacteristic("read", readCharacteristic);
+		monitorCharacteristic("write (RX)", writeCharacteristic);
 	}).catch(function(error) {
 		console.log("Something went wrong. " + error);
 	});
 }
 
 function readall() {
-	read("read", readCharacteristic);
 	read("notify", notifyCharacteristic);
 }
 

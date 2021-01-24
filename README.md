@@ -121,3 +121,25 @@ List of characteristics: (https://www.microchip.com/forums/m893253.aspx)
         }
     }
 
+
+
+Break-down of steps in the Java app
+
+MainActivity:
+    - Finds the device we need for bluetooth
+    - Nothing else of importance
+
+BluetoothLeService:
+    - Sets up queues to collect and receive data
+    - 
+
+ChessBoardActivity:
+- makeGattUpdateIntentFilter
+        intentFilter.addAction(BluetoothLeService.ACTION_GATT_CONNECTED);
+        intentFilter.addAction(BluetoothLeService.ACTION_GATT_DISCONNECTED);
+        intentFilter.addAction(BluetoothLeService.ACTION_GATT_SERVICES_DISCOVERED);
+        intentFilter.addAction(BluetoothLeService.ACTION_DATA_AVAILABLE);
+- enableNotification
+    - If the characteristics has read, we set notifiaction
+      and calls readCharacteristic using the mTxCharacteristic
+
