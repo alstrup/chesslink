@@ -2,6 +2,7 @@
 
 <script>
 
+// Encoding stuff for how to send data with parity and checksums
 function addParity(C) {
 	C |= 0x80;
 	for (var i=0;i < 7;i++) {
@@ -30,6 +31,38 @@ function encode(s) {
 	return res;
 }
 
+var fragment = 200;
+// This sends a command "m" to the board, handling encoding and chunking
+function send(m) {
+	console.log("Sending " + m);
+	var message = encode(m);
+	sendChunk(message, 0)
+}
+
+function sendChunk(message, i) {
+	if (i < message.length) {
+		var rest = message.length - i;
+		var chunk = (rest < fragment) ? rest : fragment;
+		// console.log("Sending chunk of " + chunk);
+		
+		const buffer = new ArrayBuffer(chunk);
+		var data = new Uint8Array(buffer);
+		for (var j = 0; j < chunk; ++j) {
+			data[j] = message[i + j];
+		}
+		writeCharacteristic.writeValue(data).then(val => {
+			// console.log("Sent chunk " + i);
+			// console.log(data);
+			sendChunk(message, i + fragment)
+		}).catch(e => {
+			console.log("Could not send " + message + ": " + e);
+		});
+	} else {
+		console.log("Sent it");
+	}
+}
+
+// This receives the board state from the board
 function handleBoardData(dataview) {
 	var boardIndex = 0;
 	var board = [];
@@ -63,16 +96,11 @@ function handleBoardData(dataview) {
 
 function monitorCharacteristic(name, characteristic) {
 	console.log("Got " + name + " characteristic");
-//	console.log(characteristic.properties);
 
 	characteristic.addEventListener('characteristicvaluechanged', event => {
 		var dataview = event.currentTarget.value;
 		handleBoardData(dataview);
 	});
-/*	characteristic.addEventListener('advertisementreceived', event => {
-		console.log(name + " Advertisement Received");
-		console.log(event)
-	});*/
 }
 
 function read(name, characteristic) {
@@ -82,38 +110,6 @@ function read(name, characteristic) {
 	}).catch(e => {
 		console.log("Could not read from " + name + ": " + e);
 	});
-}
-
-
-var fragment = 200;
-function send(m) {
-	console.log("Sending " + m);
-	var message = encode(m);
-
-	sendChunk(message, 0)
-}
-
-function sendChunk(message, i) {
-	if (i < message.length) {
-		var rest = message.length - i;
-		var chunk = (rest < fragment) ? rest : fragment;
-		// console.log("Sending chunk of " + chunk);
-		
-		const buffer = new ArrayBuffer(chunk);
-		var data = new Uint8Array(buffer);
-		for (var j = 0; j < chunk; ++j) {
-			data[j] = message[i + j];
-		}
-		writeCharacteristic.writeValue(data).then(val => {
-			// console.log("Sent chunk " + i);
-			// console.log(data);
-			sendChunk(message, i + fragment)
-		}).catch(e => {
-			console.log("Could not send " + message + ": " + e);
-		});
-	} else {
-		console.log("Sent it");
-	}
 }
 
 var device = null;
@@ -173,10 +169,12 @@ function sendfast() {
 	send(leds);
 }
 
+// Reset the board
 function sendreset() {
 	send("T");
 }
 
+// Clear the LEDs
 function sendclear() {
 	send("X");
 }
@@ -189,9 +187,9 @@ function sendclear() {
 
 <button onclick="js:sendfast()">Send fast blink</button>
 
-<button onclick="js:sendreset()">Send reset</button>
-
 <button onclick="js:sendclear()">Send clear</button>
+
+<button onclick="js:sendreset()">Send reset</button>
 
 <ol>
 	<li>
@@ -208,6 +206,7 @@ function sendclear() {
 	<li>
 	Make a move, and the new board position will be printed.
 	</li>
+	<li>Send fast blink, and the LEDs will blink</li>
 </ol>
 
 </html>
