@@ -2,20 +2,14 @@
 
 <script>
 
-function getParity(n) {
-    var parity = 0; 
-    while (n != 0) { 
-        parity = 1 - parity; 
-        n = n & (n - 1); 
-    }      
-    return parity; 
-}
-
-function addOddParity(n) {
-	n = n & 0x7f;
-	if (getParity(n) == 1) {
-		return n | 0x80
-	} else return n;
+function addParity(C) {
+	C |= 0x80;
+	for (var i=0;i < 7;i++) {
+		if ((C & (1 << i)) != 0) {
+			C ^= 0x80;
+		}
+	}
+	return (C);
 }
 
 function checksum(s) {
@@ -31,7 +25,7 @@ function encode(s) {
 	var msg = s + checksum(s);
 	var res = [];
 	for (var i = 0; i < msg.length; ++i) {
-		res.push(addOddParity(msg.charCodeAt(i)));
+		res.push(addParity(msg.charCodeAt(i)));
 	}
 	return res;
 }
@@ -91,19 +85,34 @@ function read(name, characteristic) {
 }
 
 
+var fragment = 20;
 function send(m) {
 	console.log("Sending " + m);
 	var message = encode(m);
-	const buffer = new ArrayBuffer(message.length);
-	var data = new Int8Array(buffer);
-	for (var i = 0; i < message.length; ++i) {
-		data[i] = message[i];
+	sendChunk(message, 0)
+}
+
+function sendChunk(message, i) {
+	if (i < message.length) {
+		var rest = message.length - i;
+		var chunk = (rest < fragment) ? rest : fragment;
+		console.log("Sending chunk of " + chunk);
+		
+		const buffer = new ArrayBuffer(chunk);
+		var data = new Uint8Array(buffer);
+		for (var j = 0; j < chunk; ++j) {
+			data[j] = message[i + j];
+		}
+		writeCharacteristic.writeValue(data).then(val => {
+			console.log("Sent chunk " + i);
+			console.log(data);
+			sendChunk(message, i + fragment)
+		}).catch(e => {
+			console.log("Could not send " + message + ": " + e);
+		});
+	} else {
+		console.log("Sent it");
 	}
-	writeCharacteristic.writeValue(data).then(val => {
-		console.log("Sent " + m + ".");
-	}).catch(e => {
-		console.log("Could not send " + m + ": " + e);
-	});
 }
 
 var device = null;
@@ -153,7 +162,13 @@ function readall() {
 }
 
 function sends() {
-	send("S")
+	var leds = "L32";
+	for (var x = 0; x < 9; ++x) {
+		for (var y = 0; y < 9; ++y) {
+			leds += "55"
+		}
+	}
+	send(leds);
 }
 
 </script>
