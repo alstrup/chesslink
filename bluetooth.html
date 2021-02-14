@@ -64,33 +64,60 @@ function sendChunk(message, i) {
 
 // This receives the board state from the board
 function handleBoardData(dataview) {
-	var boardIndex = 0;
-	var board = [];
-	for (var i = 0 ; i < dataview.byteLength; ++i) {
-		var c = dataview.getUint8(i) & 0x7f;
-		if (c < 0x20 || c > 0x7a) { 
-		} else if (c == 's'.charCodeAt(0)) {
-			boardIndex = 0;
-		} else if (boardIndex < 64) {
-			board[boardIndex] = c;
-            boardIndex++;
-		} else {
-			// Other stuff comes here,
-			// but that is for the parity, which
-			// we will just ignore
-		}
-	}
 
-	// Now, we have the board in board. Print it
-	console.log("Received board");
-	boardIndex = 0;
-	for (var y = 0; y < 8; ++y) {
-		var row = "" + (y + 1) + " ";
-		for (var x = 0; x < 8; ++x) {
-			row += String.fromCharCode(board[boardIndex]);
-			boardIndex++;
+	var print = function(message) {
+		var row = "";
+		for (var i = 0 ; i < dataview.byteLength; ++i) {
+			var c = dataview.getUint8(i) & 0x7f;
+			row += String.fromCharCode(c);
 		}
-		console.log(row);
+		console.log(message + ": " + row);
+	};
+
+	var response = String.fromCharCode(dataview.getUint8(0) & 0x7f);
+	if (response == "l") {
+		// For leds
+		print("LED received");
+	} else if (response == "t") {
+		// For reset
+		print("Reset received");
+	} else if (response == "x") {
+		// For clear
+		print("Clear received");
+
+	} else if (response == "s") {
+		// This is board state
+		var boardIndex = 0;
+		var board = [];
+		for (var i = 0 ; i < dataview.byteLength; ++i) {
+			var c = dataview.getUint8(i) & 0x7f;
+			if (c < 0x20 || c > 0x7a) { 
+			} else if (c == 's'.charCodeAt(0)) {
+				boardIndex = 0;
+			} else if (boardIndex < 64) {
+				board[boardIndex] = c;
+				boardIndex++;
+			} else {
+				// Other stuff comes here,
+				// but that is for the parity, which
+				// we will just ignore
+			}
+		}
+
+		// Now, we have the board in board. Print it
+		console.log("Received board");
+		boardIndex = 0;
+		for (var y = 0; y < 8; ++y) {
+			var row = "" + (y + 1) + " ";
+			for (var x = 0; x < 8; ++x) {
+				row += String.fromCharCode(board[boardIndex]);
+				boardIndex++;
+			}
+			console.log(row);
+		}
+	} else {
+		console.log("Unknown response");
+		console.log(dataview);
 	}
 }
 
