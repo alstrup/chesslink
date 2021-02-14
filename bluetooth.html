@@ -17,7 +17,7 @@ function checksum(s) {
 	for (var i = 0; i < s.length; ++i) {
 		par = par ^ s.charCodeAt(i);
 	}
-	return par.toString(16);
+	return par.toString(16).toUpperCase();
 }
 
 // This encodes the message s with parity and checksum for transmission
@@ -85,10 +85,11 @@ function read(name, characteristic) {
 }
 
 
-var fragment = 20;
+var fragment = 200;
 function send(m) {
 	console.log("Sending " + m);
 	var message = encode(m);
+
 	sendChunk(message, 0)
 }
 
@@ -96,7 +97,7 @@ function sendChunk(message, i) {
 	if (i < message.length) {
 		var rest = message.length - i;
 		var chunk = (rest < fragment) ? rest : fragment;
-		console.log("Sending chunk of " + chunk);
+		// console.log("Sending chunk of " + chunk);
 		
 		const buffer = new ArrayBuffer(chunk);
 		var data = new Uint8Array(buffer);
@@ -104,8 +105,8 @@ function sendChunk(message, i) {
 			data[j] = message[i + j];
 		}
 		writeCharacteristic.writeValue(data).then(val => {
-			console.log("Sent chunk " + i);
-			console.log(data);
+			// console.log("Sent chunk " + i);
+			// console.log(data);
 			sendChunk(message, i + fragment)
 		}).catch(e => {
 			console.log("Could not send " + message + ": " + e);
@@ -161,7 +162,8 @@ function readall() {
 	read("notify", notifyCharacteristic);
 }
 
-function sends() {
+// This blinks all LEDs fast. The 55 is a bit-pattern in upper-case hex for a 8-clock cycle of the LED pattern
+function sendfast() {
 	var leds = "L32";
 	for (var x = 0; x < 9; ++x) {
 		for (var y = 0; y < 9; ++y) {
@@ -171,13 +173,25 @@ function sends() {
 	send(leds);
 }
 
+function sendreset() {
+	send("T");
+}
+
+function sendclear() {
+	send("X");
+}
+
 </script>
 
 <button onclick="js:discover()">Connect</button>
 
 <button onclick="js:readall()">Read all values</button>
 
-<button onclick="js:sends()">Send S</button>
+<button onclick="js:sendfast()">Send fast blink</button>
+
+<button onclick="js:sendreset()">Send reset</button>
+
+<button onclick="js:sendclear()">Send clear</button>
 
 <ol>
 	<li>
