@@ -206,6 +206,74 @@ function sendclear() {
 	send("X");
 }
 
+function sendLetter(l) {
+	var leds = "L32";
+	for (var y = 0; y < 9; ++y) {
+		var row = l[y];
+		for (var x = 0; x < 9; ++x) {
+			var char = row.charAt(8 - x);
+			if (char == "0") {
+				leds += "00";
+			} else if (char == "1") {
+				leds += "55";
+			} else if (char == "2") {
+				leds += "FF";
+			} else {
+				leds += char + char;
+			}
+		}
+	}
+	send(leds);
+}
+
+function sendlove() {
+	sendLetter([
+		"000020000",
+		"000222000",
+		"000222000",
+		"002202200",
+		"002202200",
+		"002222200",
+		"022000220",
+		"022000220",
+		"220000022"
+	]);
+
+	setTimeout(
+		function() {
+			sendLetter([
+				"000000000",
+				"002000200",
+				"022202220",
+				"222222222",
+				"222222222",
+				"022222220",
+				"002222200",
+				"000222000",
+				"000020000"
+			]);
+
+			setTimeout(
+				function() {
+					sendLetter([
+						"000222200",
+						"002222220",
+						"022000022",
+						"220000000",
+						"220000000",
+						"220000000",
+						"022000022",
+						"002222220",
+						"000222200",
+					]);
+				}, 2000
+			)
+
+
+		}, 2000
+	)
+}
+
 </script>
 
 <button onclick="js:discover()">Connect</button>
@@ -217,6 +285,8 @@ function sendclear() {
 <button onclick="js:sendclear()">Send clear</button>
 
 <button onclick="js:sendreset()">Send reset</button>
+
+<button onclick="js:sendlove()">Send love</button>
 
 <ol>
 	<li>
