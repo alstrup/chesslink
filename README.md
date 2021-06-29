@@ -21,6 +21,10 @@ implements the Bluetooth API, and follow the instructions.
 
 https://www.hiarcs.com/eboard/ChessLinkDrivers.htm
 
+https://zadig.akeo.ie/
+
+https://larsgk.github.io/webusb-tester/
+
 ## Protocol documentation
 
 https://github.com/domschl/python-mchess/blob/master/mchess/magic-board.md

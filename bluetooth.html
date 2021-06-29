@@ -50,13 +50,25 @@ function sendChunk(message, i) {
 		for (var j = 0; j < chunk; ++j) {
 			data[j] = message[i + j];
 		}
-		writeCharacteristic.writeValue(data).then(val => {
-			// console.log("Sent chunk " + i);
-			// console.log(data);
-			sendChunk(message, i + fragment)
-		}).catch(e => {
-			console.log("Could not send " + message + ": " + e);
-		});
+		if (writeCharacteristic != null) {
+			writeCharacteristic.writeValue(data).then(val => {
+				// console.log("Sent chunk " + i);
+				// console.log(data);
+				sendChunk(message, i + fragment)
+			}).catch(e => {
+				console.log("Could not send " + message + ": " + e);
+			});
+		} else if (usbDevice != null) {
+			console.log("Trying to send to USB");
+			usbDevice.transferOut(2, data).then(val => {
+				console.log("Sent chunk " + i);
+				sendChunk(message, i + fragment)
+			}).catch(e => {
+				console.log("Could not send " + message + ": " + e);
+			});
+		} else {
+			console.log("ERROR: Connect to board through Bluetooth or USB first");
+		}
 	} else {
 		console.log("Sent it");
 	}
@@ -150,7 +162,6 @@ function discover() {
 		filters: [{name: 'MILLENNIUM CHESS'}],
 		optionalServices: ['49535343-fe7d-4ae5-8fa9-9fafd205e455']
 	}
-
 	navigator.bluetooth.requestDevice(options).then(function(d) {
 		device = d;
 		console.log('Found ' + device.name + " with id " + device.id);
@@ -182,29 +193,36 @@ function discover() {
 }
 
 async function discoverUsb() {
+	if (!window.isSecureContext) {
+		console.log("This is not a secure context. Use a web server");
+	}
+
 	usbDevice = await navigator.usb.requestDevice({ filters: [{ vendorId: 0x0403 } ] });
 	console.log(usbDevice.productName);      // "FT232R USB UART"
 
 	navigator.usb.addEventListener('connect', event => {
 		console.log("Connected to " + event);
 	});
-
 	navigator.usb.addEventListener('disconnect', event => {
 		console.log("Disconnected to " + event);
 	});
-}
 
-async function openUsb() {
 	console.log("Trying to open the device");
 	await usbDevice.open();
 
-	console.log(usbDevice.configurations);
-	await usbDevice.selectConfiguration(0);
-
-	let result = await usbDevice.transferIn(5, 64);
-	console.log(`Received: ${result}`);
-
+	if (usbDevice.configuration === null) {
+		console.log("Selecting configuration for USB device");
+		await usbDevice.selectConfiguration(1);
+	}
+	console.log("Claiming interface");
 	await usbDevice.claimInterface(0);
+
+	console.log(usbDevice);
+
+	console.log("About to receive");
+	let result = await usbDevice.transferIn(1, 64);
+	console.log(`Received:`);
+	console.log(result);
 }
 
 function readall() {
@@ -303,7 +321,6 @@ function sendlove() {
 <button onclick="js:discover()">Connect Bluetooth</button>
 
 <button onclick="js:discoverUsb()">Connect USB</button>
-<button onclick="js:openUsb()">Open USB</button>
 
 <button onclick="js:readall()">Read all values</button>
 
