@@ -17,6 +17,10 @@ fundation for this.
 Open bluetooth.html in Chrome or Firefox or another browser, which
 implements the Bluetooth API, and follow the instructions.
 
+## USB Note
+
+https://www.hiarcs.com/eboard/ChessLinkDrivers.htm
+
 ## Protocol documentation
 
 https://github.com/domschl/python-mchess/blob/master/mchess/magic-board.md

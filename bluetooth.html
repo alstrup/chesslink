@@ -64,7 +64,6 @@ function sendChunk(message, i) {
 
 // This receives the board state from the board
 function handleBoardData(dataview) {
-
 	var print = function(message) {
 		var row = "";
 		for (var i = 0 ; i < dataview.byteLength; ++i) {
@@ -140,11 +139,12 @@ function read(name, characteristic) {
 }
 
 var device = null;
+var usbDevice = null;
 var service = null;
 var notifyCharacteristic = null;	// Called TX
 var writeCharacteristic = null;		// Called RX
 
-// This is what we run when we click
+// This is what we run when we click for bluetooth
 function discover() {
 	let options = {
 		filters: [{name: 'MILLENNIUM CHESS'}],
@@ -179,6 +179,32 @@ function discover() {
 	}).catch(function(error) {
 		console.log("Something went wrong. " + error);
 	});
+}
+
+async function discoverUsb() {
+	usbDevice = await navigator.usb.requestDevice({ filters: [{ vendorId: 0x0403 } ] });
+	console.log(usbDevice.productName);      // "FT232R USB UART"
+
+	navigator.usb.addEventListener('connect', event => {
+		console.log("Connected to " + event);
+	});
+
+	navigator.usb.addEventListener('disconnect', event => {
+		console.log("Disconnected to " + event);
+	});
+}
+
+async function openUsb() {
+	console.log("Trying to open the device");
+	await usbDevice.open();
+
+	console.log(usbDevice.configurations);
+	await usbDevice.selectConfiguration(0);
+
+	let result = await usbDevice.transferIn(5, 64);
+	console.log(`Received: ${result}`);
+
+	await usbDevice.claimInterface(0);
 }
 
 function readall() {
@@ -274,7 +300,10 @@ function sendlove() {
 
 </script>
 
-<button onclick="js:discover()">Connect</button>
+<button onclick="js:discover()">Connect Bluetooth</button>
+
+<button onclick="js:discoverUsb()">Connect USB</button>
+<button onclick="js:openUsb()">Open USB</button>
 
 <button onclick="js:readall()">Read all values</button>
 
