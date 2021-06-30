@@ -58,10 +58,12 @@ function sendChunk(message, i) {
 			}).catch(e => {
 				console.log("Could not send " + message + ": " + e);
 			});
-		} else if (usbDevice != null) {
-			console.log("Trying to send to USB");
-			usbDevice.transferOut(2, data).then(val => {
+		} else if (port != null) {
+			console.log("Trying to send to serial");
+			const writer = port.writable.getWriter();
+			writer.write(data).then(val => {
 				console.log("Sent chunk " + i);
+				writer.releaseLock();
 				sendChunk(message, i + fragment)
 			}).catch(e => {
 				console.log("Could not send " + message + ": " + e);
@@ -74,18 +76,27 @@ function sendChunk(message, i) {
 	}
 }
 
+function dataView2UInt(dataview) {
+	var data = new Uint8Array(dataview.byteLength);
+	for (var i = 0 ; i < dataview.byteLength; ++i) {
+		var c = dataview.getUint8(i);
+		data[i] = c;
+	}
+	return data;
+}
+
 // This receives the board state from the board
-function handleBoardData(dataview) {
+function handleBoardData(data) {
 	var print = function(message) {
 		var row = "";
-		for (var i = 0 ; i < dataview.byteLength; ++i) {
-			var c = dataview.getUint8(i) & 0x7f;
+		for (var i = 0 ; i < data.length; ++i) {
+			var c = data[i] & 0x7f;
 			row += String.fromCharCode(c);
 		}
 		console.log(message + ": " + row);
 	};
 
-	var response = String.fromCharCode(dataview.getUint8(0) & 0x7f);
+	var response = String.fromCharCode(data[0] & 0x7f);
 	if (response == "l") {
 		// For leds
 		print("LED received");
@@ -100,8 +111,8 @@ function handleBoardData(dataview) {
 		// This is board state
 		var boardIndex = 0;
 		var board = [];
-		for (var i = 0 ; i < dataview.byteLength; ++i) {
-			var c = dataview.getUint8(i) & 0x7f;
+		for (var i = 0 ; i < data.length; ++i) {
+			var c = data[i] & 0x7f;
 			if (c < 0x20 || c > 0x7a) { 
 			} else if (c == 's'.charCodeAt(0)) {
 				boardIndex = 0;
@@ -137,7 +148,8 @@ function monitorCharacteristic(name, characteristic) {
 
 	characteristic.addEventListener('characteristicvaluechanged', event => {
 		var dataview = event.currentTarget.value;
-		handleBoardData(dataview);
+		var data = dataView2UInt(dataview);
+		handleBoardData(data);
 	});
 }
 
@@ -150,8 +162,8 @@ function read(name, characteristic) {
 	});
 }
 
+// State for Bluetooth connection
 var device = null;
-var usbDevice = null;
 var service = null;
 var notifyCharacteristic = null;	// Called TX
 var writeCharacteristic = null;		// Called RX
@@ -192,37 +204,55 @@ function discover() {
 	});
 }
 
-async function discoverUsb() {
-	if (!window.isSecureContext) {
-		console.log("This is not a secure context. Use a web server");
-	}
-
-	usbDevice = await navigator.usb.requestDevice({ filters: [{ vendorId: 0x0403 } ] });
-	console.log(usbDevice.productName);      // "FT232R USB UART"
-
-	navigator.usb.addEventListener('connect', event => {
-		console.log("Connected to " + event);
+// State for serial connection
+var port = null;
+async function discoverSerial() {
+	navigator.serial.addEventListener("connect", (event) => {
+		console.log("Serial connected");
+		console.log(event);
 	});
-	navigator.usb.addEventListener('disconnect', event => {
-		console.log("Disconnected to " + event);
+	navigator.serial.addEventListener("disconnect", (event) => {
+		console.log("Serial disconnected");
+		console.log(event);
 	});
 
-	console.log("Trying to open the device");
-	await usbDevice.open();
+	if (port != null) {
+		console.log("Already has a port");
+		if (!port.readable) {
+			console.log("Stream is not readable");
+		}
+	} else {
+		// Prompt user to select any serial port.
+		port = await navigator.serial.requestPort(
+			[{ usbVendorId: 0x0403}]
+		);
+		await port.open({baudRate: 38400});
+		if (port.readable) {
+			const reader = port.readable.getReader();
+			startSerialListening(reader);
+		} else {
+			console.log("Stream is not readable");
+		}
 
-	if (usbDevice.configuration === null) {
-		console.log("Selecting configuration for USB device");
-		await usbDevice.selectConfiguration(1);
 	}
-	console.log("Claiming interface");
-	await usbDevice.claimInterface(0);
+}
 
-	console.log(usbDevice);
-
-	console.log("About to receive");
-	let result = await usbDevice.transferIn(1, 64);
-	console.log(`Received:`);
-	console.log(result);
+// Called when we get data from the serial port
+function startSerialListening(reader) {
+	reader.read().then((data) => {
+		const { value, done } = data;
+		console.log("Received serial data");
+		if (done) {
+			console.log("Done");
+			reader.releaseLock();
+		} else {
+			handleBoardData(value);
+		}
+		startSerialListening(reader);
+	}).catch(function (error) {
+		console.log("Could not read serial");
+		console.log(error);
+	})
 }
 
 function readall() {
@@ -320,7 +350,7 @@ function sendlove() {
 
 <button onclick="js:discover()">Connect Bluetooth</button>
 
-<button onclick="js:discoverUsb()">Connect USB</button>
+<button onclick="js:discoverSerial()">Connect Serial</button>
 
 <button onclick="js:readall()">Read all values</button>
 

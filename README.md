@@ -19,11 +19,13 @@ implements the Bluetooth API, and follow the instructions.
 
 ## USB Note
 
-https://www.hiarcs.com/eboard/ChessLinkDrivers.htm
-
+On Windows, the only drivers that work are the once from Zadig:
 https://zadig.akeo.ie/
 
-https://larsgk.github.io/webusb-tester/
+The official drivers are these, and they work with Python MChess,
+but not in the browser for some reason:
+https://www.hiarcs.com/eboard/ChessLinkDrivers.htm
+
 
 ## Protocol documentation
 
