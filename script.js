@@ -70,8 +70,9 @@ function sendChunk(message, i) {
         .catch(e => {
           console.log('Could not send ' + message + ': ' + e);
         });
-    } else {
-      console.log('ERROR: Connect to board through Bluetooth or USB first');
+    } else if (usbDevice) {
+      console.log('Trying to send to USB');
+      // TODO
     }
   } else {
     console.log('Sent it');
@@ -265,6 +266,27 @@ function startSerialListening(reader) {
       console.log('Could not read serial');
       console.log(error);
     });
+}
+
+let usbDevice = null;
+async function discoverUsb() {
+  const device = await navigator.usb.requestDevice({
+    filters: [
+      {
+        vendorId: Number.parseInt('0x0403', 16),
+        productId: Number.parseInt('0x6001', 16),
+      },
+    ],
+  });
+
+  if (!device) return;
+
+  await device.open();
+  if (device.configuration === null) await device.selectConfiguration(1);
+
+  console.log(device, 'opened');
+
+  usbDevice = device;
 }
 
 function readall() {
